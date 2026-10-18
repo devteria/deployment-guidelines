@@ -16,30 +16,6 @@ This repository originates from **[Devteria Channel](https://www.youtube.com/@De
 
 The system is separated into two deployment tiers connected via a shared Docker network (`devteria-network`):
 
-```
-                       ┌────────────────────────┐
-                       │  Client / Web Browser  │
-                       └───────────┬────────────┘
-                                   │
-                                   ▼ (Port 3000)
-                     ┌────────────────────────────┐
-                     │     web-app (Next.js)      │
-                     └─────────────┬──────────────┘
-                                   │
-                                   ▼ (Port 8080)
-                     ┌────────────────────────────┐
-                     │ identity-service (Spring)  │
-                     └─────────────┬──────────────┘
-                                   │
-                                   ▼ (Port 3306)
-                     ┌────────────────────────────┐
-                     │       MySQL 8.4 LTS        │
-                     │      (Database Tier)       │
-                     └────────────────────────────┘
-                                   │
-            [Shared Docker Network: devteria-network]
-```
-
 1. **Infrastructure Tier (`deployment/infra`)**:
    - **MySQL 8.4 (LTS)**: Primary relational database with volume persistence (`mysql` named volume) and custom configuration (`my.cnf`).
    - **Shared Network**: `devteria-network` (bridge).
