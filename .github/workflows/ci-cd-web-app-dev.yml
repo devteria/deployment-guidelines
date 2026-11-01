@@ -13,7 +13,7 @@ env:
   NEXT_PUBLIC_API_BASE_URL: https://api.devteria.io
 
 jobs:
-  build_and_push:
+  build_and_push: #CI
     name: Build and push (Web App)
     runs-on: ubuntu-latest
     environment: dev
@@ -60,7 +60,7 @@ jobs:
           TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep "dev-" | head -n 1)
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
-  deploy_to_docker_compose:
+  deploy_to_docker_compose: #CD
     name: Deploy to Docker Compose (Web App)
     needs: build_and_push
     runs-on: ubuntu-latest
