@@ -1,0 +1,80 @@
+name: CI-CD on DEV
+on:
+  push:
+    branches: ["dev"]
+    paths:
+      - "web-app/**"
+      - ".github/workflows/ci-cd-web-app-dev.yml"
+
+env:
+  DOCKER_NAMESPACE: devteria
+  DOCKER_IMAGE: web-app
+  SERVICE_DIR: web-app
+  NEXT_PUBLIC_API_BASE_URL: https://api.devteria.io
+
+jobs:
+  build_and_push:
+    name: Build and push (Web App)
+    runs-on: ubuntu-latest
+    environment: dev
+    outputs:
+      image_tag: ${{ steps.get_tag.outputs.tag }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.DOCKER_NAMESPACE }}/${{ env.DOCKER_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=dev-,format=short
+
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: ./${{ env.SERVICE_DIR }}
+          file: ./${{ env.SERVICE_DIR }}/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ env.NEXT_PUBLIC_API_BASE_URL }}
+
+      - name: Get image tag for deploy
+        id: get_tag
+        run: |
+          TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep "dev-" | head -n 1)
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+  deploy_to_docker_compose:
+    name: Deploy to Docker Compose (Web App)
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
+          script: |
+            cd deployment/services
+            export WEB_APP_IMAGE=${{ needs.build_and_push.outputs.image_tag }}
+            docker compose pull web-app
+            docker compose up -d --no-deps web-app

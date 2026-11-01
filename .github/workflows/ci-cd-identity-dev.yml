@@ -1,0 +1,89 @@
+name: CI-CD on DEV
+on:
+  push:
+    branches: ["dev"]
+    paths:
+      - "identity-service/**"
+      - ".github/workflows/ci-cd-identity-dev.yml"
+
+env:
+  DOCKER_NAMESPACE: devteria
+  DOCKER_IMAGE: identity-service
+  SERVICE_DIR: identity-service
+
+jobs:
+  build_and_push:
+    name: Build and push (Identity Service)
+    runs-on: ubuntu-latest
+    environment: dev
+    outputs:
+      image_tag: ${{ steps.get_tag.outputs.tag }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Set up JDK
+        uses: actions/setup-java@v6
+        with:
+          java-version: "25"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Build and Run Tests with Maven
+        run: |
+          cd ${{ env.SERVICE_DIR }}
+          mvn -B package
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.DOCKER_NAMESPACE }}/${{ env.DOCKER_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=dev-,format=short
+
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: ./${{ env.SERVICE_DIR }}
+          file: ./${{ env.SERVICE_DIR }}/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Get image tag for deploy
+        id: get_tag
+        run: |
+          TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep "dev-" | head -n 1)
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+  deploy_to_docker_compose:
+    name: Deploy to Docker Compose (Identity Service)
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
+          script: |
+            cd deployment/services
+            export IDENTITY_IMAGE=${{ needs.build_and_push.outputs.image_tag }}
+            docker compose pull identity-service
+            docker compose up -d --no-deps identity-service
