@@ -1,7 +1,8 @@
 services:
 
   web-app:
-    image: devteria/web-app:0.9.1
+    image: ${WEB_APP_IMAGE:-devteria/web-app:latest}
+    pull_policy: always
     container_name: web-app
     restart: always
     ports:
@@ -12,7 +13,8 @@ services:
       - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
   identity-service:
-    image: devteria/identity-service:0.9.1
+    image: ${IDENTITY_IMAGE:-devteria/identity-service:latest}
+    pull_policy: always
     container_name: identity-service
     restart: always
     environment:
