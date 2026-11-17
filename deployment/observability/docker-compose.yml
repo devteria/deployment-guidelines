@@ -1,0 +1,42 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-remote-write-receiver'
+      - '--enable-feature=exemplar-storage'
+      - '--enable-feature=native-histograms'
+    ports:
+      - "9090:9090"
+    restart: always
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:13.2-slim
+    container_name: grafana
+    ports:
+      - "3500:3000"
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/datasources
+      - grafana_data:/var/lib/grafana
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+    name: devteria-network
+
+volumes:
+  prometheus_data:
+  grafana_data:
