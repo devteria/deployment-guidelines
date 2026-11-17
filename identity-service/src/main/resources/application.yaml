@@ -4,6 +4,8 @@ server:
     context-path: /identity
 
 spring:
+  application:
+    name: identity-service
   datasource:
     url: ${DBMS_CONNECTION:jdbc:mysql://localhost:3306/identity_service}
     driverClassName: "com.mysql.cj.jdbc.Driver"
@@ -13,6 +15,29 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+management:
+  server:
+    # Runs the actuator on port 8081
+    port: 8081
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+          client:
+            requests: true
+    tags:
+      application: ${spring.application.name}
+  endpoints:
+    web:
+      exposure:
+        base-path: /app-telemetry
+        include: prometheus, health, info
+  endpoint:
+    prometheus:
+      enabled: true
 
 jwt:
   signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"
