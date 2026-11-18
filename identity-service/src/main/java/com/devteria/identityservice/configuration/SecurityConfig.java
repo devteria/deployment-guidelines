@@ -22,7 +22,7 @@ import org.springframework.web.filter.CorsFilter;
 @EnableMethodSecurity
 public class SecurityConfig {
     private final String[] PUBLIC_ENDPOINTS = {
-        "/app-telemetry/prometheus", "/app-telemetry/health", "/app-telemetry/info", "/users", "/auth/token", "/auth/introspect", "/auth/logout", "/auth/refresh"
+        "/app-telemetry/prometheus", "/users", "/auth/token", "/auth/introspect", "/auth/logout", "/auth/refresh"
     };
 
     @Autowired
