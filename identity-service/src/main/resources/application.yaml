@@ -31,9 +31,9 @@ management:
       application: ${spring.application.name}
   endpoints:
     web:
+      base-path: /app-telemetry
       exposure:
-        base-path: /app-telemetry
-        include: prometheus, health, info
+        include: prometheus
   endpoint:
     prometheus:
       enabled: true
